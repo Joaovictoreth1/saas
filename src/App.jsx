@@ -1,122 +1,69 @@
 import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
+import { estimate, plans, seatLimit } from './pricing.js'
 import './App.css'
 
-function App() {
-  const [count, setCount] = useState(0)
+const money = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
+const price = cents => money.format(cents / 100)
+
+export default function App() {
+  const [seats, setSeats] = useState('5')
+  const [annual, setAnnual] = useState(false)
+  const [selected, setSelected] = useState(plans[0])
+  const quote = estimate(selected, seats, annual)
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
+    <main className="pricing">
+      <header>
+        <p className="eyebrow">SaaS · Simulador</p>
+        <h1>Planeje o custo da sua equipe</h1>
+        <p>Compare os planos com preços ilustrativos. Nenhuma cobrança será feita.</p>
+      </header>
+      <section aria-labelledby="team-title" className="panel">
+        <h2 id="team-title">Configure sua estimativa</h2>
+        <div className="preferences">
+          <div>
+            <label htmlFor="seats">Pessoas na equipe</label>
+            <input id="seats" type="number" min="1" max={seatLimit} step="1" value={seats}
+              aria-invalid={!quote} aria-describedby="seat-hint"
+              onChange={event => setSeats(event.currentTarget.value)} />
+            <p id="seat-hint">Informe um número inteiro entre 1 e {seatLimit}.</p>
+          </div>
+          <label className="billing">
+            <input type="checkbox" checked={annual} onChange={event => setAnnual(event.currentTarget.checked)} />
+            Cobrança anual com 20% de desconto
+          </label>
         </div>
       </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+      <fieldset className="plans">
+        <legend>Selecione um plano</legend>
+        <div className="plan-grid">
+          {plans.map(plan => (
+            <label key={plan.id} className="panel plan">
+              <span className="plan-title">
+                <input type="radio" name="plan" checked={selected === plan} onChange={() => setSelected(plan)} />
+                {plan.name}
+              </span>
+              <span>{plan.description}</span>
+              <span><strong>{price(plan.monthly)}</strong> por pessoa/mês, sem desconto</span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      <section className="panel summary" aria-labelledby="quote-title">
+        <h2 id="quote-title">Estimativa · {selected.name}</h2>
+        <div aria-live="polite" aria-atomic="true">
+          {quote ? (
+            <dl>
+              <div><dt>Equipe</dt><dd>{quote.seats} {quote.seats === 1 ? 'pessoa' : 'pessoas'}</dd></div>
+              <div><dt>{annual ? 'Cobrança anual' : 'Cobrança mensal'}</dt><dd>{price(quote.invoice)}</dd></div>
+              {annual && <>
+                <div><dt>Equivalente por mês</dt><dd>{price(quote.monthly)}</dd></div>
+                <div><dt>Economia em 12 meses</dt><dd>{price(quote.savings)}</dd></div>
+              </>}
+            </dl>
+          ) : <p>Informe uma quantidade válida para calcular o total.</p>}
+        </div>
+      </section>
+    </main>
   )
 }
-
-export default App
